@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize_scalar
 from matplotlib import pyplot as plt
+import matplotlib.patches as patches
 
 def load_data(filepath):
     """
@@ -11,9 +12,10 @@ def load_data(filepath):
     print(f"Loading dataset from {filepath}...")
     df = pd.read_csv(filepath)
     
-    # Extract X (all columns except the last one) and Y (the 'width' column)
-    X = df.iloc[:, :-1].values
-    Y = df['width'].values
+    # Extract X (all columns with pattern 'X_') and Y (the 'width' column)
+    X_columns = [col for col in df.columns if col.startswith('x_')]
+    X = df[X_columns].values  # Convert to numpy array  
+    Y = df['GT width'].values
     
     return X, Y
 
@@ -73,53 +75,111 @@ def optimize_threshold_height(X, Y):
         raise RuntimeError("Optimization failed to converge.")
 
 
+def plot_detection_zones (Y, Y_pred, critical_width, figname='predicted_vs_GT_width.png', safety_margin=0):
+
+    # Create scatter plot
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.scatter(Y, Y_pred, alpha=0.5, color='blue', edgecolors='k', label='Samples')
+        
+    # Add ideal line (y=x)
+    min_val = min(np.min(Y), np.min(Y_pred))
+    max_val = max(np.max(Y), np.max(Y_pred))
+    ax.plot([min_val, max_val], [min_val, max_val], color='red', linestyle='--', linewidth=2, label='Ideal Fit ($Y_{pred} = Y_{GT}$)')
+
+    # 2. Get current axis limits to bound the colored rectangles
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    
+    # 3. Define soft, transparent background colors (Alpha controls transparency)
+    alpha_val = 0.15
+    colors = {
+        'TN': '#2ca02c',  # Soft Green
+        'TP': '#1f77b4',  # Soft Blue
+        'FN': '#d62728',  # Soft Red
+        'FP': '#ff7f0e'   # Soft Orange
+    }
+        
+    # 4. Draw the background quadrants
+    # NON_CONFORM: Bottom-Left
+    ax.fill_between([xlim[0], critical_width], xlim[0], critical_width+safety_margin, color=colors['TP'], alpha=alpha_val, label='TP zone')
+    # FP: Top-Left
+    ax.fill_between([xlim[0], critical_width], critical_width+safety_margin, ylim[1], color=colors['FN'], alpha=alpha_val, label='FN Zone')
+    # FP: Bottom-Right
+    ax.fill_between([critical_width, xlim[1]], ylim[0], critical_width+safety_margin, color=colors['FP'], alpha=alpha_val, label='FP Zone')
+    # TP: Top-Right
+    ax.fill_between([critical_width, xlim[1]], critical_width+safety_margin, ylim[1], color=colors['TN'], alpha=alpha_val, label='TN Zone')
+        
+    # 5. Draw the critical_width lines to clearly separate the zones
+    ax.axvline(x=critical_width, color='black', linestyle='--', linewidth=1.5, label=f'Critical_Width ({critical_width})')
+    if safety_margin > 0:
+        ax.axhline(y=critical_width+safety_margin, color='black', linestyle='--', linewidth=1.5)
+        ax.axhline(y=critical_width, color='#cccccc', linestyle='--', linewidth=1.5)
+    else:
+        ax.axhline(y=critical_width, color='black', linestyle='--', linewidth=1.5)
+        
+    # 6. Add text labels inside each quadrant for maximum clarity
+    text_y_low = (ylim[0] + critical_width + safety_margin) / 2
+    text_y_high = (critical_width + safety_margin + ylim[1]) / 2
+    text_x_low = (xlim[0] + critical_width) / 2
+    text_x_high = (critical_width + xlim[1]) / 2
+    
+    ax.text(text_x_low, text_y_low, 'TP \n (vrai non-conforme)', fontsize=14, fontweight='bold', ha='center', va='center', color='green', alpha=0.6)
+    ax.text(text_x_low, text_y_high, 'FN \n (non-conforme non détecté)', fontsize=14, fontweight='bold', ha='center', va='center', color='orange', alpha=0.6)
+    ax.text(text_x_high, text_y_low, 'FP \n (conforme mal classé)', fontsize=14, fontweight='bold', ha='center', va='center', color='red', alpha=0.6)
+    ax.text(text_x_high, text_y_high, 'TN \n (vrai conforme)', fontsize=14, fontweight='bold', ha='center', va='center', color='blue', alpha=0.6)
+    
+    # Re-adjust limits so the fill doesn't expand your original plot scale
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    
+    ax.set_xlabel('Ground Truth Width ($Y_{GT}$)')
+    ax.set_ylabel('Predicted Width ($Y_{pred}$)')
+    ax.set_title('Scatter Plot: Predicted Width vs. Ground Truth Width')
+    ax.legend()
+    ax.grid(True, linestyle=':', alpha=0.6)
+    
+    plt.savefig(figname, bbox_inches='tight')
+    plt.close()
+    print(f"Plot saved successfully as '{figname}'.")
+
+
+
 
 
 if __name__ == "__main__":
     # Path to the dataset file
-    dataset_path = 'pulse_dataset.csv'
+    dataset_path = 'weld_width_dataset.csv'
     
     try:
         # 1. Import dataset
         X, Y = load_data(dataset_path)
         print(f"Dataset successfully imported. Shape of X: {X.shape}, Shape of Y: {Y.shape}")
-        
-        # 3. Optimize the threshold height
-        optimal_fraction, min_mae = optimize_threshold_height(X, Y)
-        
-        print("\n--- Optimization Results ---")
-        print(f"Optimal Threshold Fraction: {optimal_fraction:.4f} (aka {optimal_fraction*100:.1f}% up the pulse height)")
-        print(f"Minimum Mean Absolute Error: {min_mae:.4f} units of width")
-        
-        # Verify on a sample realization
-        sample_idx = 0
-        sample_pred = measure_width_adaptive(X[sample_idx], optimal_fraction)
-        print(f"\nVerification on Sample {sample_idx + 1}:")
-        print(f"  Ground Truth Width: {Y[sample_idx]:.4f}")
-        print(f"  Measured Width:     {sample_pred:.4f}")
-        print(f"  Absolute Error:     {abs(sample_pred - Y[sample_idx]):.4f}")
-
-        # Predict Y using the optimized global fraction
-        Y_pred = np.array([measure_width_adaptive(sig, optimal_fraction) for sig in X])
-
-        # Create scatter plot
-        fig, ax = plt.subplots(figsize=(8, 8))
-        ax.scatter(Y, Y_pred, alpha=0.5, color='blue', edgecolors='k', label='Samples')
-
-        # Add ideal line (y=x)
-        min_val = min(np.min(Y), np.min(Y_pred))
-        max_val = max(np.max(Y), np.max(Y_pred))
-        ax.plot([min_val, max_val], [min_val, max_val], color='red', linestyle='--', linewidth=2, label='Ideal Fit ($Y_{pred} = Y_{GT}$)')
-
-        ax.set_xlabel('Ground Truth Width ($Y_{GT}$)')
-        ax.set_ylabel('Predicted Width ($Y_{pred}$)')
-        ax.set_title('Scatter Plot: Predicted Width vs. Ground Truth Width')
-        ax.legend()
-        ax.grid(True, linestyle=':', alpha=0.6)
-
-        plt.savefig('predicted_vs_GT_width.png', bbox_inches='tight')
-        plt.close()
-        print("Plot saved successfully as 'predicted_vs_GT_width.png'.")
-        
     except FileNotFoundError:
         print(f"Error: The file '{dataset_path}' was not found. Please ensure you have generated it first.")
+        
+    # 3. Optimize the threshold height
+    optimal_fraction, min_mae = optimize_threshold_height(X, Y)
+        
+    print("\n--- Optimization Results ---")
+    print(f"Optimal Threshold Fraction: {optimal_fraction:.4f} (aka {optimal_fraction*100:.1f}% up the pulse height)")
+    print(f"Minimum Mean Absolute Error: {min_mae:.4f} units of width")
+        
+    # Verify on a sample realization
+    sample_idx = 0
+    sample_pred = measure_width_adaptive(X[sample_idx], optimal_fraction)
+    print(f"\nVerification on Sample {sample_idx + 1}:")
+    print(f"  Ground Truth Width: {Y[sample_idx]:.4f}")
+    print(f"  Measured Width:     {sample_pred:.4f}")
+    print(f"  Absolute Error:     {abs(sample_pred - Y[sample_idx]):.4f}")
+        
+    # Predict Y using the optimized global fraction
+    Y_pred = np.array([measure_width_adaptive(sig, optimal_fraction) for sig in X])
+    
+    # 1. Define your threshold (e.g., 25)
+    critical_width = 20.0
+    
+    # Plot the detection zones
+    plot_detection_zones(Y, Y_pred, critical_width, figname='predicted_vs_GT_width.png')
+    # Plot the detection zones with safety margin
+    safety_margin = 3.0  # Example safety margin to shift the critical width line       
+    plot_detection_zones(Y, Y_pred, critical_width, figname='predicted_vs_GT_width_safety_margin.png', safety_margin=safety_margin)

@@ -42,9 +42,10 @@ Y_data = []
 for _ in range(num_samples):
     # randomize the welding wedge geometry for each realization
     width = np.random.uniform(40, 50)
+    critical_width = 20 # on the lower end (or below) of the width range
     center = np.random.uniform(40, 60)
     depth = np.random.uniform(3, 5)
-    noise_level = 0.2
+    noise_level = 0.1
     slope_width = np.random.uniform(5, 15)
 
     # generate the wedge pulse and add noise
@@ -52,22 +53,41 @@ for _ in range(num_samples):
     noise = np.random.normal(0, noise_level, size=num_points)
     signal = pulse - np.min(pulse) + noise
     
+    if False:
+        GT_width = width - .2*slope_width # the cursor is rather high (close red in the colormap)
+    else:
+        GT_width = width - 2.*slope_width # the cursor is rather low (close to blue in the colormap)
+
+    reader_1 = GT_width + np.random.normal(0, 2)  # Simulate reader 1 with some noise
+    reader_2 = GT_width + np.random.normal(0, 2)  # Simulate reader 2 with some noise
+    conform_1 = 1 if reader_1 > critical_width else 0  # Conformity for reader 1
+    conform_2 = 1 if reader_2 > critical_width else 0  # Conformity for reader 2
+    # if conform_1 != conform_2 then reader_3 provides the tiebreaker
+    reader_3 = ''
+    conform_3 = ''
+    if conform_1 != conform_2:
+        # reader 3 provides reading close GT_width
+        reader_3 = GT_width + np.random.normal(0, 2)  # Simulate reader 3 with less noise
+        conform_3 = 1 if reader_3 > critical_width else 0  
+
+    Y_data_example = [GT_width, reader_1, conform_1, reader_2, conform_2, reader_3, conform_3]
+
     X_data.append(signal)
-    # Y_data.append(width - .2*slope_width) # operator places the cursor high (close red in the colormap)
-    Y_data.append(width - 2.*slope_width) # operator places the cursor low (close to zero)
+    Y_data.append(Y_data_example)
+
 
 X_data = np.array(X_data)
 Y_data = np.array(Y_data)
 
 # Save the generated dataset to a CSV file
-columns = [f'x_{i}' for i in range(num_points)] + ['width']
+columns = [f'x_{i}' for i in range(num_points)] + ['GT width'] + ['reader 1'] + ['CONFORMITY 1'] + ['reader 2'] + ['CONFORMITY 2'] + ['reader 3'] + ['CONFORMITY 3'] 
 df = pd.DataFrame(np.column_stack((X_data, Y_data)), columns=columns)
-df.to_csv('pulse_dataset.csv', index=False)
+df.to_csv('weld_width_dataset.csv', index=False)
 
 # Plot the first 5 realizations
 fig, ax = plt.subplots(figsize=(10, 6))
 for i in range(5):
-    ax.plot(x_grid, X_data[i], label=f'Realization {i+1} (Width: {Y_data[i]:.2f})')
+    ax.plot(x_grid, X_data[i], label=f'Realization {i+1} (GT Width: {float(Y_data[i][0]):.2f})')
 
 ax.set_title('First 5 Examples of Welded Wedge')
 ax.set_xlabel('Y Position')
