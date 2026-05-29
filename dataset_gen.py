@@ -35,7 +35,7 @@ def generate_welding_wedge(x, center, width, depth, slope_width=2.0):
     return y
 
 # Generate the dataset
-num_samples = 300
+num_samples = 100
 X_data = []
 Y_data = []
 
@@ -46,17 +46,19 @@ for _ in range(num_samples):
     center = np.random.uniform(40, 60)
     depth = np.random.uniform(3, 5)
     noise_level = 0.1
-    slope_width = np.random.uniform(5, 15)
+    slope_width = np.random.uniform(5, 10)
 
     # generate the wedge pulse and add noise
     pulse = generate_welding_wedge(x_grid, center, width, depth, slope_width=slope_width)
     noise = np.random.normal(0, noise_level, size=num_points)
     signal = pulse - np.min(pulse) + noise
     
-    if False:
-        GT_width = width - .2*slope_width # the cursor is rather high (close red in the colormap)
+    if True:
+        # the cursor is rather low (close to blue in the colormap)
+        GT_width = width - 2.*slope_width
     else:
-        GT_width = width - 2.*slope_width # the cursor is rather low (close to blue in the colormap)
+        # the cursor is rather high (close red in the colormap)
+        GT_width = width - .2*slope_width
 
     reader_1 = GT_width + np.random.normal(0, 2)  # Simulate reader 1 with some noise
     reader_2 = GT_width + np.random.normal(0, 2)  # Simulate reader 2 with some noise

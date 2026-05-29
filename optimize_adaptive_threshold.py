@@ -80,10 +80,10 @@ def plot_detection_zones (Y, Y_pred, critical_width, figname='predicted_vs_GT_wi
     # Create scatter plot
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.scatter(Y, Y_pred, alpha=0.5, color='blue', edgecolors='k', label='Samples')
-        
+    
     # Add ideal line (y=x)
-    min_val = min(np.min(Y), np.min(Y_pred))
-    max_val = max(np.max(Y), np.max(Y_pred))
+    min_val = min(np.min(Y), np.min(Y_pred), critical_width)
+    max_val = max(np.max(Y), np.max(Y_pred), critical_width + safety_margin)
     ax.plot([min_val, max_val], [min_val, max_val], color='red', linestyle='--', linewidth=2, label='Ideal Fit ($Y_{pred} = Y_{GT}$)')
 
     # 2. Get current axis limits to bound the colored rectangles
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     Y_pred = np.array([measure_width_adaptive(sig, optimal_fraction) for sig in X])
     
     # 1. Define your threshold (e.g., 25)
-    critical_width = 20.0
+    critical_width = 25.0
     safety_margin = 2.0  # Define safety margin to shift the critical width line       
     
     # Plot the detection zones
