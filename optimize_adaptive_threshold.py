@@ -113,13 +113,13 @@ if __name__ == "__main__":
 
         ax.set_xlabel('Ground Truth Width ($Y_{GT}$)')
         ax.set_ylabel('Predicted Width ($Y_{pred}$)')
-        ax.set_title('Scatter Plot: Adaptive Predictions vs. Ground Truth Width')
+        ax.set_title('Scatter Plot: Predicted Width vs. Ground Truth Width')
         ax.legend()
         ax.grid(True, linestyle=':', alpha=0.6)
 
-        plt.savefig('predicted_vs_gt_y_adaptive.png', bbox_inches='tight')
+        plt.savefig('predicted_vs_GT_width.png', bbox_inches='tight')
         plt.close()
-        print("Plot saved successfully as 'predicted_vs_gt_y_adaptive.png'.")
+        print("Plot saved successfully as 'predicted_vs_GT_width.png'.")
         
     except FileNotFoundError:
         print(f"Error: The file '{dataset_path}' was not found. Please ensure you have generated it first.")
