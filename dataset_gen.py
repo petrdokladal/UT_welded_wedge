@@ -35,7 +35,7 @@ def generate_welding_wedge(x, center, width, depth, slope_width=2.0):
     return y
 
 # Generate the dataset
-num_samples = 100
+num_samples = 300
 X_data = []
 Y_data = []
 

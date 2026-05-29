@@ -75,7 +75,7 @@ def optimize_threshold_height(X, Y):
         raise RuntimeError("Optimization failed to converge.")
 
 
-def plot_detection_zones (Y, Y_pred, critical_width, figname='predicted_vs_GT_width.png', safety_margin=0):
+def plot_detection_zones (Y, Y_pred, critical_width, figname='predicted_vs_GT_width.png', safety_margin=0, font_size=14):
 
     # Create scatter plot
     fig, ax = plt.subplots(figsize=(8, 8))
@@ -123,10 +123,10 @@ def plot_detection_zones (Y, Y_pred, critical_width, figname='predicted_vs_GT_wi
     text_x_low = (xlim[0] + critical_width) / 2
     text_x_high = (critical_width + xlim[1]) / 2
     
-    ax.text(text_x_low, text_y_low, 'TP \n (vrai non-conforme)', fontsize=14, fontweight='bold', ha='center', va='center', color='green', alpha=0.6)
-    ax.text(text_x_low, text_y_high, 'FN \n (non-conforme non détecté)', fontsize=14, fontweight='bold', ha='center', va='center', color='orange', alpha=0.6)
-    ax.text(text_x_high, text_y_low, 'FP \n (conforme mal classé)', fontsize=14, fontweight='bold', ha='center', va='center', color='red', alpha=0.6)
-    ax.text(text_x_high, text_y_high, 'TN \n (vrai conforme)', fontsize=14, fontweight='bold', ha='center', va='center', color='blue', alpha=0.6)
+    ax.text(text_x_low, text_y_low, 'TP \n (vrai non-conforme)', fontsize=font_size, fontweight='bold', ha='center', va='center', color='green', alpha=0.6)
+    ax.text(text_x_low, text_y_high, 'FN \n (non-conforme non détecté)', fontsize=font_size, fontweight='bold', ha='center', va='center', color='orange', alpha=0.6)
+    ax.text(text_x_high, text_y_low, 'FP \n (conforme mal classé)', fontsize=font_size, fontweight='bold', ha='center', va='center', color='red', alpha=0.6)
+    ax.text(text_x_high, text_y_high, 'TN \n (vrai conforme)', fontsize=font_size, fontweight='bold', ha='center', va='center', color='blue', alpha=0.6)
     
     # Re-adjust limits so the fill doesn't expand your original plot scale
     ax.set_xlim(xlim)
@@ -177,9 +177,9 @@ if __name__ == "__main__":
     
     # 1. Define your threshold (e.g., 25)
     critical_width = 20.0
+    safety_margin = 2.0  # Define safety margin to shift the critical width line       
     
     # Plot the detection zones
-    plot_detection_zones(Y, Y_pred, critical_width, figname='predicted_vs_GT_width.png')
+    plot_detection_zones(Y, Y_pred, critical_width, figname='predicted_vs_GT_width.png', font_size=12)
     # Plot the detection zones with safety margin
-    safety_margin = 3.0  # Example safety margin to shift the critical width line       
-    plot_detection_zones(Y, Y_pred, critical_width, figname='predicted_vs_GT_width_safety_margin.png', safety_margin=safety_margin)
+    plot_detection_zones(Y, Y_pred, critical_width, figname='predicted_vs_GT_width_safety_margin.png', safety_margin=safety_margin, font_size=12)
